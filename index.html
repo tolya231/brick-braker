@@ -292,9 +292,9 @@
       x: x || canvas.width / 2,
       y: y || canvas.height - 150,
       radius: 8,
-      speed: 16.8, // 2x faster (was 8.4)
-      dx: (Math.random() - 0.5) * 24,
-      dy: -16.8
+      speed: 6, // Reduced from 16.8
+      dx: (Math.random() - 0.5) * 9,
+      dy: -6
     };
   }
 
@@ -524,7 +524,7 @@
 
         // Add angle based on hit position
         const hitPos = (ball.x - paddle.x) / paddle.width;
-        ball.dx = (hitPos - 0.5) * 14;
+        ball.dx = (hitPos - 0.5) * 8; // Reduced from 14
       }
 
       // Brick collision - check trajectory for tunneling prevention
@@ -687,9 +687,9 @@
         break;
       case 'speed':
         balls.forEach(ball => {
-          ball.speed *= 1.3;
-          ball.dx *= 1.3;
-          ball.dy *= 1.3;
+          ball.speed *= 1.2; // Reduced from 1.3
+          ball.dx *= 1.2;
+          ball.dy *= 1.2;
         });
         break;
       case 'wide':
