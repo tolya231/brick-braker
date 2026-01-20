@@ -40,9 +40,9 @@
 
     #ui {
       position: absolute;
-      top: 20px;
-      left: 20px;
-      right: 20px;
+      top: 10px;
+      left: 10px;
+      right: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -53,11 +53,11 @@
     .ui-item {
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
-      padding: 10px 20px;
-      border-radius: 20px;
+      padding: 8px 16px;
+      border-radius: 15px;
       color: white;
       font-weight: bold;
-      font-size: 16px;
+      font-size: 14px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
 
@@ -180,16 +180,16 @@
 
     #pauseBtn {
       position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 50px;
-      height: 50px;
+      top: 10px;
+      right: 10px;
+      width: 45px;
+      height: 45px;
       background: rgba(255, 255, 255, 0.15);
       backdrop-filter: blur(10px);
       border: none;
-      border-radius: 15px;
+      border-radius: 12px;
       color: white;
-      font-size: 24px;
+      font-size: 20px;
       cursor: pointer;
       z-index: 10;
       pointer-events: auto;
@@ -284,7 +284,7 @@
     height: 15,
     x: 0,
     y: 0,
-    speed: 10,
+    speed: 15,
     dx: 0
   };
 
@@ -303,59 +303,84 @@
   // Initialize paddle position
   function initPaddle() {
     paddle.x = canvas.width / 2 - paddle.width / 2;
-    paddle.y = canvas.height - 50; // Higher up to avoid going into maze
+    paddle.y = canvas.height - 120; // Higher up
   }
 
   // Create ball
   function createBall(x, y) {
     return {
       x: x || canvas.width / 2,
-      y: y || canvas.height - 100,
+      y: y || canvas.height - 150,
       radius: 8,
-      speed: 8.4,
-      dx: (Math.random() - 0.5) * 12,
-      dy: -8.4
+      speed: 16.8, // 2x faster (was 8.4)
+      dx: (Math.random() - 0.5) * 24,
+      dy: -16.8
     };
   }
 
   // Generate maze-like level
   function generateLevel(level) {
     bricks = [];
-    const rows = 25;
+    const rows = 18;
     const cols = 20;
-    const brickWidth = 16; // Short square-like blocks, slightly bigger than ball
+    const brickWidth = 16;
     const brickHeight = 16;
     const padding = 2;
     const startX = (canvas.width - (cols * (brickWidth + padding))) / 2;
 
-    // Generate maze pattern with fewer unbreakable blocks
+    // Different patterns for different levels
+    const pattern = level % 5; // 5 different patterns cycling
+
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = startX + col * (brickWidth + padding);
-        const y = 60 + row * (brickHeight + padding);
+        const y = 100 + row * (brickHeight + padding);
 
         let isUnbreakable = false;
 
-        // First row - only 10 unbreakable blocks (reduced from 20)
+        // First row pattern varies by level
         if (row === 0) {
-          if (col < 10) {
-            isUnbreakable = true;
+          if (pattern === 0) {
+            // Pattern 0: First 10 blocks
+            isUnbreakable = col < 10;
+          } else if (pattern === 1) {
+            // Pattern 1: Alternating blocks
+            isUnbreakable = col % 2 === 0;
+          } else if (pattern === 2) {
+            // Pattern 2: Edges
+            isUnbreakable = col < 5 || col >= 15;
+          } else if (pattern === 3) {
+            // Pattern 3: Center
+            isUnbreakable = col >= 5 && col < 15;
+          } else {
+            // Pattern 4: Random
+            isUnbreakable = Math.random() < 0.5;
           }
         }
-        // Create sparse horizontal lines of unbreakable blocks (every 12 rows)
-        else if (row % 12 === 0 && col % 5 !== 2) {
-          isUnbreakable = true;
-        }
-        // Create sparse vertical lines of unbreakable blocks (every 7 columns)
-        else if (col % 7 === 0 && row % 8 !== 4) {
-          isUnbreakable = true;
+        // Different maze patterns per level
+        else if (pattern === 0) {
+          // Horizontal and vertical grid
+          if (row % 12 === 0 && col % 5 !== 2) isUnbreakable = true;
+          if (col % 7 === 0 && row % 8 !== 4) isUnbreakable = true;
+        } else if (pattern === 1) {
+          // Diagonal pattern
+          if ((row + col) % 9 === 0) isUnbreakable = true;
+          if ((row - col + 20) % 9 === 0) isUnbreakable = true;
+        } else if (pattern === 2) {
+          // Checkerboard walls
+          if (row % 6 === 0 && col % 4 === 0) isUnbreakable = true;
+          if (row % 6 === 3 && col % 4 === 2) isUnbreakable = true;
+        } else if (pattern === 3) {
+          // Vertical corridors
+          if (col % 5 === 0 && row % 4 !== 2) isUnbreakable = true;
+        } else {
+          // Horizontal corridors
+          if (row % 6 === 0 && col % 3 !== 1) isUnbreakable = true;
         }
 
         if (isUnbreakable) {
-          // Unbreakable block
           bricks.push({
-            x,
-            y,
+            x, y,
             width: brickWidth,
             height: brickHeight,
             health: 999,
@@ -364,11 +389,10 @@
             unbreakable: true
           });
         } else {
-          // Normal block - fill all non-unbreakable spaces
-          const health = Math.min(level, 3);
+          // Health increases with level
+          const health = Math.min(Math.floor(level / 3) + 1, 3);
           bricks.push({
-            x,
-            y,
+            x, y,
             width: brickWidth,
             height: brickHeight,
             health,
@@ -510,9 +534,10 @@
           ball.x = ball.radius;
         }
       }
-      if (ball.y - ball.radius < 0) {
+      // Top boundary at 90px (above UI and bricks)
+      if (ball.y - ball.radius < 90) {
         ball.dy *= -1;
-        ball.y = ball.radius; // Adjust position
+        ball.y = 90 + ball.radius; // Adjust position
       }
 
       // Paddle collision
@@ -575,8 +600,8 @@
               gameState.score += 10;
               updateScore();
 
-              // Drop powerup chance
-              if (Math.random() < 0.2) {
+              // Drop powerup chance - approximately every 50 bricks
+              if (Math.random() < 0.02) {
                 createPowerup(brick.x + brick.width / 2, brick.y);
               }
             }
@@ -806,19 +831,34 @@
 
   function buyContinue() {
     if (gameState.savedState && !gameState.usedContinue) {
-      // Telegram Stars payment
-      tg.showPopup({
+      // Check if Telegram Stars is available
+      if (!tg.StarsPayment) {
+        tg.showAlert('Оплата звёздами недоступна. Попробуйте обновить Telegram.');
+        return;
+      }
+
+      // Create invoice link for 1 Star
+      const invoiceLink = tg.createInvoiceLink({
         title: 'Продолжить игру',
-        message: 'Хотите продолжить игру за 1 звезду?',
-        buttons: [
-          {id: 'pay', type: 'default', text: 'Оплатить ⭐'},
-          {id: 'cancel', type: 'cancel'}
-        ]
-      }, (buttonId) => {
-        if (buttonId === 'pay') {
-          // In real implementation, use Telegram Stars API
-          // For now, simulate payment
+        description: 'Получите 2 жизни и продолжите с текущего уровня',
+        currency: 'XTR',
+        prices: [{ label: 'Продолжить', amount: 1 }],
+        payload: JSON.stringify({
+          action: 'continue',
+          level: gameState.savedState.level,
+          score: gameState.savedState.score
+        })
+      });
+
+      // Open Stars payment
+      tg.openInvoice(invoiceLink, (status) => {
+        if (status === 'paid') {
           continuePlaying();
+          tg.showAlert('Игра продолжена! Удачи! 🎮');
+        } else if (status === 'cancelled') {
+          // User cancelled - do nothing
+        } else if (status === 'failed') {
+          tg.showAlert('Не удалось завершить оплату');
         }
       });
     }
