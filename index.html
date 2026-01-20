@@ -178,24 +178,6 @@
       display: none !important;
     }
 
-    #pauseBtn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 45px;
-      height: 45px;
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      border: none;
-      border-radius: 12px;
-      color: white;
-      font-size: 20px;
-      cursor: pointer;
-      z-index: 10;
-      pointer-events: auto;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    }
-
     @keyframes pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.1); }
@@ -208,8 +190,6 @@
 </head>
 <body>
 <div id="gameContainer">
-  <button id="pauseBtn">⏸</button>
-
   <div id="ui">
     <div class="ui-item">❤️ <span id="lives">3</span></div>
     <div class="ui-item">⭐ <span id="score">0</span></div>
@@ -284,7 +264,7 @@
     height: 15,
     x: 0,
     y: 0,
-    speed: 15,
+    speed: 10,
     dx: 0
   };
 
@@ -524,39 +504,47 @@
       ball.x += ball.dx;
       ball.y += ball.dy;
 
-      // Wall collision - bounce from sides and top
-      if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0) {
-        ball.dx *= -1;
-        // Adjust position to prevent sticking
-        if (ball.x + ball.radius > canvas.width) {
-          ball.x = canvas.width - ball.radius;
-        } else {
-          ball.x = ball.radius;
-        }
+      // Wall collision - bounce from sides
+      if (ball.x + ball.radius > canvas.width) {
+        ball.dx = -Math.abs(ball.dx);
+        ball.x = canvas.width - ball.radius;
       }
-      // Top boundary at 90px (above UI and bricks)
+      if (ball.x - ball.radius < 0) {
+        ball.dx = Math.abs(ball.dx);
+        ball.x = ball.radius;
+      }
+
+      // Top boundary at 90px
       if (ball.y - ball.radius < 90) {
-        ball.dy *= -1;
-        ball.y = 90 + ball.radius; // Adjust position
+        ball.dy = Math.abs(ball.dy);
+        ball.y = 90 + ball.radius;
       }
 
       // Paddle collision
-      if (ball.y + ball.radius > paddle.y &&
-              ball.y - ball.radius < paddle.y + paddle.height &&
-              ball.x > paddle.x &&
-              ball.x < paddle.x + paddle.width) {
+      if (ball.dy > 0 &&
+              ball.y + ball.radius >= paddle.y &&
+              ball.y + ball.radius <= paddle.y + paddle.height + 5 &&
+              ball.x >= paddle.x &&
+              ball.x <= paddle.x + paddle.width) {
 
         ball.dy = -Math.abs(ball.dy);
-        ball.y = paddle.y - ball.radius; // Instant bounce position
+        ball.y = paddle.y - ball.radius;
+
+        // Add angle based on hit position
         const hitPos = (ball.x - paddle.x) / paddle.width;
-        ball.dx = (hitPos - 0.5) * 10;
+        ball.dx = (hitPos - 0.5) * 14;
       }
 
-      // Brick collision - improved instant bounce
-      bricks.forEach(brick => {
-        if (!brick.visible) return;
+      // Brick collision - improved physics
+      let hitBrick = false;
 
-        // Check if ball intersects with brick
+      bricks.forEach(brick => {
+        if (!brick.visible || hitBrick) return;
+
+        const brickCenterX = brick.x + brick.width / 2;
+        const brickCenterY = brick.y + brick.height / 2;
+
+        // Find closest point on brick to ball center
         const closestX = Math.max(brick.x, Math.min(ball.x, brick.x + brick.width));
         const closestY = Math.max(brick.y, Math.min(ball.y, brick.y + brick.height));
 
@@ -565,30 +553,39 @@
         const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
 
         if (distance < ball.radius) {
-          // Determine collision side for better bounce
-          const overlapLeft = ball.x + ball.radius - brick.x;
-          const overlapRight = brick.x + brick.width - (ball.x - ball.radius);
-          const overlapTop = ball.y + ball.radius - brick.y;
-          const overlapBottom = brick.y + brick.height - (ball.y - ball.radius);
+          hitBrick = true;
 
-          const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+          // Determine which side was hit based on ball position relative to brick
+          const fromLeft = ball.x < brick.x;
+          const fromRight = ball.x > brick.x + brick.width;
+          const fromTop = ball.y < brick.y;
+          const fromBottom = ball.y > brick.y + brick.height;
 
-          // Bounce based on collision side
-          if (minOverlap === overlapTop || minOverlap === overlapBottom) {
-            ball.dy *= -1;
-            // Adjust position for instant bounce
-            if (minOverlap === overlapTop) {
-              ball.y = brick.y - ball.radius;
-            } else {
-              ball.y = brick.y + brick.height + ball.radius;
-            }
-          } else {
+          // Calculate distances to each edge
+          const distToLeft = Math.abs(ball.x - brick.x);
+          const distToRight = Math.abs(ball.x - (brick.x + brick.width));
+          const distToTop = Math.abs(ball.y - brick.y);
+          const distToBottom = Math.abs(ball.y - (brick.y + brick.height));
+
+          const minHorizontal = Math.min(distToLeft, distToRight);
+          const minVertical = Math.min(distToTop, distToBottom);
+
+          // Bounce based on which side is closer
+          if (minHorizontal < minVertical) {
+            // Hit left or right side
             ball.dx *= -1;
-            // Adjust position for instant bounce
-            if (minOverlap === overlapLeft) {
+            if (fromLeft) {
               ball.x = brick.x - ball.radius;
             } else {
               ball.x = brick.x + brick.width + ball.radius;
+            }
+          } else {
+            // Hit top or bottom side
+            ball.dy *= -1;
+            if (fromTop) {
+              ball.y = brick.y - ball.radius;
+            } else {
+              ball.y = brick.y + brick.height + ball.radius;
             }
           }
 
@@ -781,14 +778,6 @@
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     paddle.x = e.clientX - rect.left - paddle.width / 2;
-  });
-
-  // Pause button
-  document.getElementById('pauseBtn').addEventListener('click', () => {
-    if (gameState.playing) {
-      gameState.paused = !gameState.paused;
-      document.getElementById('pauseBtn').textContent = gameState.paused ? '▶️' : '⏸';
-    }
   });
 
   // Menu functions
