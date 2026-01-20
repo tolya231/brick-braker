@@ -702,8 +702,19 @@
               gameState.score += 10;
               updateScore();
 
-              // Drop powerup chance - 4%
-              if (Math.random() < 0.04) {
+              // Calculate remaining breakable bricks
+              const remainingBricks = bricks.filter(b => b.visible && !b.unbreakable).length;
+
+              // Increase powerup drop rate as level progresses
+              let dropChance = 0.04; // Base 4%
+
+              if (remainingBricks < 50) {
+                dropChance = 0.12; // 12% when less than 50 bricks left
+              } else if (remainingBricks < 100) {
+                dropChance = 0.08; // 8% when less than 100 bricks left
+              }
+
+              if (Math.random() < dropChance) {
                 createPowerup(brick.x + brick.width / 2, brick.y);
               }
             }
