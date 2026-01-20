@@ -318,44 +318,40 @@
 
         let isUnbreakable = false;
 
-        // First row pattern varies by level
+        // First row pattern - mostly unbreakable with gaps
         if (row === 0) {
-          if (pattern === 0) {
-            // Pattern 0: First 10 blocks
-            isUnbreakable = col < 10;
-          } else if (pattern === 1) {
-            // Pattern 1: Alternating blocks
-            isUnbreakable = col % 2 === 0;
-          } else if (pattern === 2) {
-            // Pattern 2: Edges
-            isUnbreakable = col < 5 || col >= 15;
-          } else if (pattern === 3) {
-            // Pattern 3: Center
-            isUnbreakable = col >= 5 && col < 15;
-          } else {
-            // Pattern 4: Random
-            isUnbreakable = Math.random() < 0.5;
-          }
+          // Leave gaps every 4 blocks
+          isUnbreakable = col % 4 !== 2;
         }
-        // Different maze patterns per level
+        // Bottom rows - mostly unbreakable with random gaps
+        else if (row >= rows - 2) {
+          // 70% unbreakable, 30% breakable
+          isUnbreakable = Math.random() < 0.7;
+        }
+        // Side columns - mostly unbreakable with gaps
+        else if (col === 0 || col === cols - 1) {
+          // Leave gaps every 3 blocks
+          isUnbreakable = row % 3 !== 1;
+        }
+        // Different maze patterns per level - NO complete lines
         else if (pattern === 0) {
-          // Horizontal and vertical grid
-          if (row % 12 === 0 && col % 5 !== 2) isUnbreakable = true;
-          if (col % 7 === 0 && row % 8 !== 4) isUnbreakable = true;
+          // Sparse horizontal and vertical grid with gaps
+          if (row % 12 === 0) isUnbreakable = col % 4 !== 2; // Gaps every 4
+          else if (col % 7 === 0) isUnbreakable = row % 5 !== 2; // Gaps every 5
         } else if (pattern === 1) {
-          // Diagonal pattern
-          if ((row + col) % 9 === 0) isUnbreakable = true;
-          if ((row - col + 20) % 9 === 0) isUnbreakable = true;
+          // Diagonal pattern with gaps
+          if ((row + col) % 10 === 0) isUnbreakable = true;
+          else if ((row - col + 20) % 10 === 0) isUnbreakable = true;
         } else if (pattern === 2) {
-          // Checkerboard walls
-          if (row % 6 === 0 && col % 4 === 0) isUnbreakable = true;
-          if (row % 6 === 3 && col % 4 === 2) isUnbreakable = true;
+          // Checkerboard walls with gaps
+          if (row % 7 === 0) isUnbreakable = col % 3 !== 1;
+          else if (col % 6 === 0) isUnbreakable = row % 4 !== 2;
         } else if (pattern === 3) {
-          // Vertical corridors
-          if (col % 5 === 0 && row % 4 !== 2) isUnbreakable = true;
+          // Vertical corridors with gaps
+          if (col % 6 === 0) isUnbreakable = row % 4 !== 2;
         } else {
-          // Horizontal corridors
-          if (row % 6 === 0 && col % 3 !== 1) isUnbreakable = true;
+          // Horizontal corridors with gaps
+          if (row % 8 === 0) isUnbreakable = col % 5 !== 2;
         }
 
         if (isUnbreakable) {
@@ -496,6 +492,22 @@
       ball.x += ball.dx;
       ball.y += ball.dy;
 
+      // Prevent ball from getting stuck - ensure minimum velocity
+      const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+      if (speed < 3) {
+        const angle = Math.atan2(ball.dy, ball.dx);
+        ball.dx = Math.cos(angle) * 6;
+        ball.dy = Math.sin(angle) * 6;
+      }
+
+      // Cap maximum velocity
+      const maxSpeed = 12;
+      if (speed > maxSpeed) {
+        const ratio = maxSpeed / speed;
+        ball.dx *= ratio;
+        ball.dy *= ratio;
+      }
+
       // Wall collision - bounce from sides
       if (ball.x + ball.radius > canvas.width) {
         ball.dx = -Math.abs(ball.dx);
@@ -528,8 +540,10 @@
       }
 
       // Brick collision - check trajectory for tunneling prevention
+      let collisionHandled = false;
+
       bricks.forEach(brick => {
-        if (!brick.visible) return;
+        if (!brick.visible || collisionHandled) return;
 
         // Expanded collision box for fast-moving ball
         const expandedRadius = ball.radius + 2;
@@ -551,6 +565,8 @@
         const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
 
         if (distance < ball.radius) {
+          collisionHandled = true;
+
           // Check which edge was crossed using old position
           const wasLeft = oldX < brick.x;
           const wasRight = oldX > brick.x + brick.width;
@@ -632,8 +648,8 @@
               gameState.score += 10;
               updateScore();
 
-              // Drop powerup chance - approximately every 50 bricks
-              if (Math.random() < 0.02) {
+              // Drop powerup chance - 4%
+              if (Math.random() < 0.04) {
                 createPowerup(brick.x + brick.width / 2, brick.y);
               }
             }
