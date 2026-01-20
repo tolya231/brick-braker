@@ -706,12 +706,12 @@
               const remainingBricks = bricks.filter(b => b.visible && !b.unbreakable).length;
 
               // Increase powerup drop rate as level progresses
-              let dropChance = 0.04; // Base 4%
+              let dropChance = 0.05; // Base 5% (every ~20 blocks)
 
               if (remainingBricks < 50) {
-                dropChance = 0.12; // 12% when less than 50 bricks left
+                dropChance = 0.20; // 20% when less than 50 bricks (every ~5 blocks)
               } else if (remainingBricks < 100) {
-                dropChance = 0.08; // 8% when less than 100 bricks left
+                dropChance = 0.10; // 10% when less than 100 bricks (every ~10 blocks)
               }
 
               if (Math.random() < dropChance) {
